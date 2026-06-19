@@ -1,0 +1,9 @@
+[project]
+name = "sagent"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "anthropic>=0.111.0",
+    "colorama>=0.4.6",
+    "pyyaml>=6.0.3",
+]

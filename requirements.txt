@@ -1,0 +1,11 @@
+anthropic>=0.34.0
+pyyaml>=6.0
+colorama>=0.4.6        # Windows ANSI 컬러 지원
+
+# readline 지원 (선택)
+# pyreadline3            # Windows 화살표 키·히스토리 지원
+
+# DB 드라이버 (필요한 것만 설치)
+# psycopg2-binary    # PostgreSQL
+# pymysql            # MySQL
+# pyodbc             # MSSQL
