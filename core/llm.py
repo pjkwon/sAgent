@@ -1,47 +1,60 @@
 """
-LLM: Anthropic Claude API 래퍼.
-tool_use 루프를 처리하고 스트리밍을 지원합니다.
+LLM: 프로바이더 공통 타입 + 클라이언트 팩토리.
 """
 from __future__ import annotations
-import anthropic
-from typing import Optional, Iterator
+import os
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Iterator, Optional
 
 
-class LLMClient:
-    def __init__(self, model: str, max_tokens: int = 8192):
-        self.client = anthropic.Anthropic()
-        self.model = model
-        self.max_tokens = max_tokens
+@dataclass
+class TextBlock:
+    text: str
+    type: str = "text"
 
+
+@dataclass
+class ToolUseBlock:
+    id: str
+    name: str
+    input: dict
+    type: str = "tool_use"
+
+
+@dataclass
+class LLMResponse:
+    stop_reason: str  # "end_turn" | "tool_use"
+    content: list     # list[TextBlock | ToolUseBlock]
+
+
+class BaseLLMClient(ABC):
+    @abstractmethod
     def chat(
         self,
         messages: list[dict],
         tools: Optional[list[dict]] = None,
         system: str = "",
-    ) -> anthropic.types.Message:
-        """단일 API 호출. tool_use 블록 포함 가능."""
-        kwargs: dict = {
-            "model": self.model,
-            "max_tokens": self.max_tokens,
-            "messages": messages,
-        }
-        if system:
-            kwargs["system"] = system
-        if tools:
-            kwargs["tools"] = tools
-        return self.client.messages.create(**kwargs)
+    ) -> LLMResponse: ...
 
+    @abstractmethod
     def stream_text(
         self,
         messages: list[dict],
         system: str = "",
-    ) -> Iterator[str]:
-        """최종 답변을 스트리밍으로 반환."""
-        with self.client.messages.stream(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=system,
-            messages=messages,
-        ) as stream:
-            for text in stream.text_stream:
-                yield text
+    ) -> Iterator[str]: ...
+
+
+def create_llm_client(config) -> BaseLLMClient:
+    provider = getattr(config, "provider", "anthropic").lower()
+
+    if provider == "anthropic":
+        from core.providers.anthropic import AnthropicClient
+        return AnthropicClient(model=config.model, max_tokens=config.max_tokens)
+
+    elif provider == "gemini":
+        from core.providers.gemini import GeminiClient
+        api_key = getattr(config, "gemini_api_key", "") or os.environ.get("GOOGLE_API_KEY", "")
+        return GeminiClient(model=config.model, max_tokens=config.max_tokens, api_key=api_key)
+
+    raise ValueError(f"지원하지 않는 LLM 프로바이더: {provider!r}. (anthropic | gemini)")

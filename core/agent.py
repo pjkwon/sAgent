@@ -11,10 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import anthropic
-
 from core.config import Config
-from core.llm import LLMClient
+from core.llm import create_llm_client
 from tools.registry import registry
 
 
@@ -45,7 +43,7 @@ OUTPUT_FORMAT_INSTRUCTIONS = {
 class Agent:
     def __init__(self, config: Config):
         self.config = config
-        self.llm = LLMClient(model=config.model, max_tokens=config.max_tokens)
+        self.llm = create_llm_client(config)
         self.system_prompt = self._load_system_prompt()
         self.conversation: list[dict] = []
         self._session_log: list[str] = []

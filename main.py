@@ -63,6 +63,7 @@ def print_banner(config: Config) -> None:
 {CYAN}{BOLD}╔══════════════════════════════════════╗
 ║        CLI AI Agent  v1.0            ║
 ╚══════════════════════════════════════╝{RESET}
+  프로바이더: {config.provider}
   모델    : {config.model}
   작업폴더: {config.work_dir}
   출력형식: {config.output_format}
@@ -108,12 +109,6 @@ def handle_command(cmd: str, agent: Agent) -> bool:
 
     elif keyword == "tools":
         print(f"\n{BOLD}── 사용 가능한 Tool ─────────────────────────{RESET}")
-        for t in agent.llm.client.messages.create(  # tools 목록만
-            model=agent.config.model,
-            max_tokens=1,
-            messages=[{"role": "user", "content": "hi"}],
-        ).content:
-            pass  # 단순 목록 출력 대체
         from tools.registry import registry
         for name in registry.names():
             tool = registry.get(name)
@@ -165,7 +160,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-c", "--config", default="config.yaml", help="설정 파일 경로")
     parser.add_argument("--work-dir", help="작업 폴더 경로")
     parser.add_argument("--format", choices=["markdown", "plain", "json"], help="출력 형식")
-    parser.add_argument("--model", help="Claude 모델 이름")
+    parser.add_argument("--provider", choices=["anthropic", "gemini"], help="LLM 프로바이더")
+    parser.add_argument("--model", help="모델 이름 (프로바이더에 따라 다름)")
     parser.add_argument("--verbose", action="store_true", help="상세 로그 출력")
     parser.add_argument("--no-color", action="store_true", help="컬러 출력 비활성화")
     return parser.parse_args()
@@ -185,6 +181,8 @@ def main() -> None:
         config.work_dir = args.work_dir
     if args.format:
         config.output_format = args.format
+    if args.provider:
+        config.provider = args.provider
     if args.model:
         config.model = args.model
     if args.verbose:
@@ -199,9 +197,12 @@ def main() -> None:
     agent = Agent(config)
 
     # API 키 확인
-    if not config.api_key:
+    if config.provider == "anthropic" and not config.api_key:
         print(f"{YELLOW}⚠ ANTHROPIC_API_KEY가 설정되지 않았습니다.")
-        print(f"  .env 파일에 키를 입력하거나 config.yaml의 api_key 항목을 설정하세요.{RESET}\n")
+        print(f"  .env 또는 config.yaml의 api_key 항목을 설정하세요.{RESET}\n")
+    elif config.provider == "gemini" and not config.gemini_api_key:
+        print(f"{YELLOW}⚠ GOOGLE_API_KEY가 설정되지 않았습니다.")
+        print(f"  .env 또는 config.yaml의 gemini_api_key 항목을 설정하세요.{RESET}\n")
 
     # 단일 질문 모드
     if args.query:

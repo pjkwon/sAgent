@@ -4,3 +4,7 @@ logs/
 __pycache__/
 *.pyc
 *.db
+
+# uv
+.venv/
+.uv/

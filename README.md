@@ -1,7 +1,7 @@
 # CLI AI Agent
 
 파일 검색 + DB 조회를 결합한 경량 AI 에이전트입니다.  
-Claude의 native tool_use(function calling)를 기반으로 동작합니다.
+Anthropic Claude와 Google Gemini를 지원하며, native function calling 기반으로 동작합니다.
 
 ---
 
@@ -14,11 +14,29 @@ pip install -r requirements.txt
 pip install psycopg2-binary   # PostgreSQL
 pip install pymysql           # MySQL
 pip install pyodbc            # MSSQL
+
+# Gemini 사용 시
+pip install google-generativeai
 ```
 
-환경 변수 설정:
+---
+
+## API 키 설정
+
+`.env` 파일 또는 환경변수로 설정합니다.
+
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
+# Anthropic (Claude)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Google (Gemini)
+GOOGLE_API_KEY=AIza...
+```
+
+또는 `config.yaml`에 직접 입력:
+```yaml
+api_key: "sk-ant-..."       # Anthropic
+gemini_api_key: "AIza..."   # Gemini
 ```
 
 ---
@@ -35,12 +53,33 @@ python main.py
 # 단일 질문
 python main.py -q "data 폴더에서 '불량률' 키워드가 포함된 파일 찾아줘"
 
-# 작업 폴더 지정
-python main.py --work-dir ./data
+# 프로바이더 / 모델 지정
+python main.py --provider gemini --model gemini-2.5-flash
 
-# 출력 형식 변경
-python main.py --format plain
+# 작업 폴더 / 출력 형식 지정
+python main.py --work-dir ./data --format plain
 ```
+
+---
+
+## LLM 프로바이더 선택
+
+`config.yaml`에서 `provider`와 `model`을 설정합니다.
+
+```yaml
+# Anthropic Claude (기본값)
+provider: "anthropic"
+model: "claude-sonnet-4-6"
+
+# Google Gemini
+provider: "gemini"
+model: "gemini-2.5-flash"
+```
+
+| 프로바이더 | 주요 모델 |
+|------------|-----------|
+| `anthropic` | `claude-sonnet-4-6`, `claude-opus-4-8`, `claude-haiku-4-5-20251001` |
+| `gemini` | `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-1.5-pro` |
 
 ---
 
@@ -54,8 +93,11 @@ agent/
 │
 ├── core/
 │   ├── agent.py          # 에이전트 루프 (핵심)
-│   ├── llm.py            # Claude API 래퍼
-│   └── config.py         # 설정 관리
+│   ├── llm.py            # 공통 타입 + 프로바이더 팩토리
+│   ├── config.py         # 설정 관리
+│   └── providers/
+│       ├── anthropic.py  # Anthropic Claude 구현
+│       └── gemini.py     # Google Gemini 구현
 │
 ├── tools/
 │   ├── registry.py       # Tool 레지스트리 (데코레이터 기반)
@@ -76,11 +118,11 @@ agent/
 ```
 사용자 입력
     ↓
-Claude API (tool_use 모드)
+LLM API (function calling 모드)
     ↓ tool_use 블록 반환
 Tool 실행 (file_tools / db_tools)
     ↓ tool_result 반환
-Claude API (결과 분석)
+LLM API (결과 분석)
     ↓ 필요 시 추가 tool 호출 반복
 최종 답변 생성
     ↓
@@ -112,7 +154,7 @@ from tools.registry import registry
 
 @registry.register(
     name="my_tool",
-    description="이 Tool이 하는 일을 Claude가 이해할 수 있게 설명하세요.",
+    description="이 Tool이 하는 일을 LLM이 이해할 수 있게 설명하세요.",
     parameters={
         "type": "object",
         "properties": {
@@ -122,7 +164,6 @@ from tools.registry import registry
     },
 )
 def my_tool(input_text: str) -> str:
-    # 처리 로직
     return f"결과: {input_text}"
 ```
 
@@ -151,16 +192,17 @@ from tools import file_tools, db_tools, my_tools  # noqa: F401
 ## 설정 파일 (config.yaml)
 
 ```yaml
+provider: "anthropic"       # anthropic | gemini
 model: "claude-sonnet-4-6"
 max_tokens: 8192
-max_iterations: 15      # 에이전트 루프 최대 횟수
+max_iterations: 15
 work_dir: "workspace"
-output_format: "markdown"
+output_format: "markdown"   # markdown | plain | json
 verbose: false
 log_session: true
 
 db:
-  type: "sqlite"        # sqlite | postgresql | mysql | mssql
+  type: "sqlite"            # sqlite | postgresql | mysql | mssql
   path: "workspace/agent.db"
 ```
 

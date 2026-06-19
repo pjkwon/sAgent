@@ -6,9 +6,19 @@
 # api_key: "sk-ant-..."
 
 # LLM 설정
+# 프로바이더: anthropic | gemini
+provider: "anthropic"
+
+# 모델 이름 (프로바이더에 맞게 변경)
+#   anthropic: claude-sonnet-4-6, claude-opus-4-8, claude-haiku-4-5-20251001
+#   gemini:    gemini-1.5-pro, gemini-1.5-flash, gemini-2.0-flash
 model: "claude-sonnet-4-6"
 max_tokens: 8192
 max_iterations: 15
+
+# Gemini API 키 (provider: gemini 사용 시)
+# gemini_api_key: "AIza..."
+# 또는 환경변수: GOOGLE_API_KEY
 
 # 작업 환경
 work_dir: "workspace"

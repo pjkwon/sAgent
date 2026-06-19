@@ -30,6 +30,7 @@ class Config:
     log_session: bool = True
 
     # LLM
+    provider: str = "anthropic"   # anthropic | gemini
     model: str = "claude-sonnet-4-6"
     max_tokens: int = 8192
     max_iterations: int = 15      # 에이전트 루프 최대 횟수
@@ -43,6 +44,7 @@ class Config:
 
     # API 키 (config.yaml 또는 .env에서 로드)
     api_key: str = ""
+    gemini_api_key: str = ""
 
     # DB
     db: DBConfig = field(default_factory=DBConfig)
@@ -66,10 +68,13 @@ class Config:
         # 2) API 키 우선순위: config.yaml > .env > 환경변수
         if not cfg.api_key:
             cfg.api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-
-        # 3) 환경변수에 반영 (Anthropic SDK가 읽을 수 있도록)
         if cfg.api_key:
             os.environ["ANTHROPIC_API_KEY"] = cfg.api_key
+
+        if not cfg.gemini_api_key:
+            cfg.gemini_api_key = os.environ.get("GOOGLE_API_KEY", "")
+        if cfg.gemini_api_key:
+            os.environ["GOOGLE_API_KEY"] = cfg.gemini_api_key
 
         return cfg
 
