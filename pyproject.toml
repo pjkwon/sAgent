@@ -5,5 +5,6 @@ requires-python = ">=3.13"
 dependencies = [
     "anthropic>=0.111.0",
     "colorama>=0.4.6",
+    "google-generativeai>=0.8.6",
     "pyyaml>=6.0.3",
 ]
